@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Booking Interface - TripNest Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Base Styles */
+        body { font-family: sans-serif; margin: 0; background-color: #f4f4f9; color: #333; }
+        .header { background-color: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .main-nav { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 10px 20px; }
+        .brand-logo { color: #4CAF50; font-size: 1.5em; font-weight: bold; text-decoration: none; display: flex; align-items: center; }
+        .nav-links a, .header-right a { color: #555; text-decoration: none; padding: 8px 15px; border-radius: 6px; transition: background-color 0.2s; }
+        .nav-links { display: flex; gap: 5px; }
+        .nav-item.active { background-color: #4CAF50; color: white; }
+        .nav-item:hover:not(.active) { background-color: #eee; }
+        .main-booking-section { padding: 40px 20px; }
+        .section-title { text-align: center; color: #4CAF50; margin-bottom: 30px; font-size: 2em; }
+
+        /* Dashboard Specific Styles */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        @media (min-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1.5fr 1fr; 
+                grid-template-areas: 
+                    "welcome quick"
+                    "recent recent";
+            }
+            .welcome-card { grid-area: welcome; }
+            .quick-links-card { grid-area: quick; }
+            .recent-bookings-card { grid-area: recent; }
+        }
+
+        /* Card Styling */
+        .stat-card, .quick-links-card, .recent-bookings-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            transition: transform 0.2s;
+        }
+
+        .card-title {
+            font-size: 1.4em;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        /* Welcome Card */
+        .welcome-card { background: linear-gradient(135deg, #4CAF50, #81C784); color: white; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; }
+        .user-info { display: flex; align-items: center; margin-bottom: 20px; }
+        .dashboard-icon { font-size: 40px; margin-right: 15px; }
+        .user-name { font-size: 2em; margin: 0; font-weight: 600; }
+        .member-since { opacity: 0.8; margin: 5px 0 0 0; }
+        .stats-summary { display: flex; justify-content: space-around; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.3); }
+        .stat-item { text-align: center; }
+        .stat-number { display: block; font-size: 1.5em; font-weight: bold; }
+        .stat-label { font-size: 0.85em; opacity: 0.9; }
+
+        /* Quick Links Card */
+        .actions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .action-item { display: flex; flex-direction: column; align-items: center; padding: 15px; border: 1px solid #eee; border-radius: 8px; text-decoration: none; color: #333; font-weight: 500; transition: background-color 0.2s, color 0.2s; }
+        .action-item:hover { background-color: #f5f5f5; color: #4CAF50; }
+        .action-icon { font-size: 24px; margin-bottom: 5px; color: #4CAF50; }
+
+        /* Recent Bookings Card */
+        .booking-list { margin-bottom: 15px; }
+        .recent-item { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 10px 0; 
+            border-bottom: 1px solid #f0f0f0; 
+        }
+        .recent-item:last-child { border-bottom: none; }
+        .item-icon { font-size: 1.2em; color: #4CAF50; margin-right: 15px; }
+        .item-details { flex-grow: 1; }
+        .item-name { margin: 0; font-weight: 600; color: #555; }
+        .item-date { font-size: 0.8em; color: #999; }
+        .item-status { padding: 4px 8px; border-radius: 5px; font-size: 0.8em; font-weight: bold; color: white; }
+        .item-status.success { background-color: #4CAF50; } /* Green */
+        .item-status.pending { background-color: #ff9800; } /* Orange */
+        .item-status.completed { background-color: #3f51b5; } /* Blue */
+        .item-status.cancelled { background-color: #d9534f; } /* Red for cancelled */
+        .cancel-btn { 
+            background-color: #d9534f; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin-left: 10px; 
+            font-size: 0.8em;
+            transition: background-color 0.2s;
+        }
+        .cancel-btn:hover {
+            background-color: #c9302c;
+        }
+
+        /* General Section Utility */
+        .booking-section { padding: 20px; min-height: 400px; display: none; flex-direction: column; align-items: center; max-width: 900px; margin: 0 auto; }
+
+
+        /* Search Interface Styles (Shared Input Styles) */
+        .search-interface { background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); padding: 30px; width: 100%; max-width: 800px; margin-bottom: 30px; }
+        .search-form { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; }
+        .input-group-search { flex: 1 1 45%; min-width: 250px; }
+        .input-group-search label { display: block; font-weight: 600; margin-bottom: 8px; color: #555; }
+        .input-group-search input, .input-group-search select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .search-btn-container { flex: 1 1 100%; margin-top: 10px; }
+        .search-btn { background-color: #FF5722; color: white; padding: 15px; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1.1em; font-weight: bold; transition: background-color 0.2s; }
+        .search-btn:hover { background-color: #e64a19; }
+
+        /* Adjustments for Hotel Search (fewer inputs) */
+        .hotel-form .input-group-search { flex: 1 1 30%; min-width: 200px; }
+        .hotel-form .input-group-search.full-width { flex: 1 1 100%; min-width: 100%; }
+        /* Adjustments for Cab Search (time input) */
+        .cabs-form .input-group-search { flex: 1 1 45%; min-width: 250px; }
+
+
+        /* --- FLIGHT/RESULT CARD STYLES (UPDATED FOR CONSISTENCY) --- */
+        #flight-results-container, #bus-results-container, #train-results-container, #hotel-results-container, #cabs-results-container {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+        }
+
+        .result-info-bar {
+            background-color: #e8f5e9;
+            color: #4CAF50;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .flight-card, .bus-card, .train-card, .hotel-card, .cab-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: box-shadow 0.2s;
+        }
+
+        .flight-details {
+            display: flex;
+            gap: 20px; 
+            flex-grow: 1;
+            align-items: center;
+        }
+
+        .flight-time {
+            display: flex; 
+            flex-direction: column; 
+            min-width: 90px;
+        }
+
+        .flight-airline {
+            font-size: 0.85em;
+            color: #777;
+            margin-bottom: 5px;
+        }
+
+        .city-code {
+            font-weight: bold;
+            font-size: 1em; 
+            color: #333;
+        }
+        
+        .time-label {
+            font-size: 1.4em; 
+            font-weight: 700;
+            color: #000;
+        }
+        
+        .flight-duration {
+            text-align: center;
+            flex-grow: 1;
+        }
+        .duration-text {
+            color: #FF5722;
+            font-size: 0.85em; 
+            font-weight: 500;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .price-section {
+            text-align: right;
+            min-width: 120px;
+        }
+
+        .price-tag {
+            font-size: 1.6em; 
+            color: #FF5722;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .book-now-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 15px; 
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+        .book-now-btn:hover { background-color: #388e3c; }
+        
+        /* Responsive adjustments for all cards */
+        @media (max-width: 600px) {
+            .flight-card, .bus-card, .train-card, .hotel-card, .cab-card { flex-direction: column; align-items: flex-start; padding: 15px; }
+            .flight-details { flex-direction: column; gap: 10px; width: 100%; margin-bottom: 15px; }
+            .flight-time { min-width: auto; flex-direction: row; justify-content: space-between; width: 100%; }
+            .flight-duration { text-align: left; }
+            .price-section { width: 100%; text-align: left; margin-top: 10px; border-top: 1px dashed #eee; padding-top: 10px; }
+            .price-tag { font-size: 1.5em; display: inline-block; margin-right: 15px; margin-bottom: 0;}
+            .book-now-btn { float: right; }
+            .input-group-search { min-width: 100%; } /* Full width for smaller screens */
+        }
+
+
+        /* Modal Styles */
+        #auth-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .auth-container { background: white; padding: 30px; border-radius: 8px; max-width: 400px; position: relative; }
+        .close-modal-btn { position: absolute; top: 10px; right: 10px; font-size: 1.5em; border: none; background: none; cursor: pointer; }
+        .form-box h2 { text-align: center; color: #4CAF50; margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .input-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .submit-btn { background-color: #4CAF50; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px; }
+        .toggle-text { text-align: center; margin-top: 20px; font-size: 0.9em; }
+        .toggle-link { color: #4CAF50; cursor: pointer; text-decoration: none; font-weight: 500; }
+        
+        /* --- Footer Styles (Naya Code) --- */
+        .footer {
+            background-color: #333; /* Dark background */
+            color: #fff;
+            padding: 30px 20px;
+            margin-top: 40px; /* Space between main content and footer */
+            font-size: 0.9em;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .footer-section h4 {
+            color: #4CAF50; /* Highlight color for headings */
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 5px;
+        }
+
+        .footer-section p, .footer-section a {
+            color: #ccc;
+            text-decoration: none;
+            line-height: 1.6;
+        }
+
+        .footer-section a:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        .social-links a {
+            color: #fff;
+            font-size: 1.5em;
+            margin-right: 15px;
+            transition: color 0.3s;
+        }
+
+        .social-links a:hover {
+            color: #4CAF50;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 20px;
+            margin-top: 20px;
+            border-top: 1px solid #555;
+            color: #ccc;
+        }
+       
+    </style>
+</head>
+<body onload="checkLoginStatus()">
+
+
+    <header class="header">
+        <nav class="main-nav">
+            <div class="header-left">
+                <a href="#" class="nav-item brand-logo" data-type="dashboard"> 
+                    <i class="fas fa-suitcase-rolling"></i>
+                    <span>TripNest</span> 
+                </a>
+            </div>
+            
+            <div class="nav-links">
+                <a href="#" class="nav-item active" data-type="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                
+                <a href="#" class="nav-item" data-type="flight"><i class="fas fa-plane"></i> Flights</a>
+                <a href="#" class="nav-item" data-type="hotel"><i class="fas fa-hotel"></i> Hotels</a>
+                <a href="#" class="nav-item" data-type="train"><i class="fas fa-train"></i> Trains</a>
+                <a href="#" class="nav-item" data-type="bus"><i class="fas fa-bus"></i> Bus</a>
+                <a href="#" class="nav-item" data-type="cabs"><i class="fas fa-taxi"></i> Cabs</a>
+            </div>
+
+            <div class="header-right">
+                <a href="#" class="nav-item right-link"><i class="fas fa-briefcase"></i> Manage Booking</a>
+                <a href="#" class="nav-item login-btn" id="login-signup-btn"><i class="fas fa-user-circle"></i> Login / Signup</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main-booking-section">
+        <div id="content-container">
+            
+            <section class="booking-section dashboard-section" data-type="dashboard" style="display:flex;">
+                <h1 class="section-title">Welcome to TripNest Dashboard 👋</h1>
+                
+                <div class="dashboard-container">
+                    
+                    <div class="stat-card welcome-card">
+                        <div class="user-info">
+                            <i class="fas fa-user-circle dashboard-icon"></i>
+                            <h2 class="user-name" id="dashboard-user-name">Hello, Traveler!</h2> 
+                            <p class="member-since">Member since: 2024</p>
+                        </div>
+                        <div class="stats-summary">
+                            <div class="stat-item">
+                                <span class="stat-number" id="total-trips-stat">0</span>
+                                <span class="stat-label">Total Trips</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="rewards-earned-stat">₹0</span>
+                                <span class="stat-label">Rewards Earned</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="upcoming-trips-stat">0</span>
+                                <span class="stat-label">Upcoming</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quick-links-card">
+                        <h2 class="card-title">Quick Actions</h2>
+                        <div class="actions-grid">
+                            <a href="#" class="action-item" data-type="flight">
+                                <i class="fas fa-plane-departure action-icon"></i>
+                                <span>New Flight</span>
+                            </a>
+                            <a href="#" class="action-item" data-type="bus">
+                                <i class="fas fa-bus action-icon"></i>
+                                <span>Book Bus</span>
+                            </a>
+                            <a href="#" class="action-item" data-type="hotel">
+                                <i class="fas fa-bed action-icon"></i>
+                                <span>Find Hotel</span>
+                            </a>
+                            <a href="#" class="action-item right-link">
+                                <i class="fas fa-briefcase action-icon"></i>
+                                <span>Manage</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="recent-bookings-card">
+                        <h2 class="card-title">📅 Recent Bookings</h2>
+                        <div class="booking-list" id="recent-bookings-list">
+                            <div style="text-align:center; padding: 20px; color:#999;" id="no-bookings-message">
+                                Log in to view your recent bookings or make a new one!
+                            </div>
+                        </div>
+                        <a href="#" class="view-all-link">View All Bookings <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="booking-section bus-section" data-type="bus">
+                <h1 class="section-title">🚌 Bus Ticket Booking</h1>
+                <div class="search-interface">
+                    <form class="search-form" id="bus-search-form">
+                        <div class="input-group-search">
+                            <label for="bus-from"><i class="fas fa-road"></i> Travelling From</label>
+                            <input type="text" id="bus-from" placeholder="City or Bus Stop" value="Hyderabad" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="bus-to"><i class="fas fa-road"></i> Travelling To</label>
+                            <input type="text" id="bus-to" placeholder="City or Bus Stop" value="Bangalore" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="bus-date"><i class="fas fa-calendar-alt"></i> Departure Date</label>
+                            <input type="date" id="bus-date" value="2025-12-30" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="bus-passengers"><i class="fas fa-users"></i> Passengers</label>
+                            <select id="bus-passengers" required>
+                                <option value="1">1 Passenger</option>
+                                <option value="2" selected>2 Passengers</option>
+                                <option value="3">3 Passengers</option>
+                                <option value="4">4+ Passengers</option>
+                            </select>
+                        </div>
+                        <div class="search-btn-container">
+                            <button type="submit" class="search-btn" id="search-bus-btn">
+                                <i class="fas fa-search"></i> Search Buses
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div id="bus-results-container"></div>
+            </section>
+            
+            <section class="booking-section train-section" data-type="train">
+                <h1 class="section-title">🚂 Train Ticket Booking</h1>
+                <div class="search-interface">
+                    <form class="search-form" id="train-search-form">
+                        <div class="input-group-search">
+                            <label for="train-from"><i class="fas fa-map-marker-alt"></i> From Station</label>
+                            <input type="text" id="train-from" placeholder="Station Code or City" value="New Delhi" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="train-to"><i class="fas fa-map-marker-alt"></i> To Station</label>
+                            <input type="text" id="train-to" placeholder="Station Code or City" value="Mumbai" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="train-date"><i class="fas fa-calendar-alt"></i> Journey Date</label>
+                            <input type="date" id="train-date" value="2026-01-05" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="train-class"><i class="fas fa-chair"></i> Class</label>
+                            <select id="train-class" required>
+                                <option value="sleeper">Sleeper (SL)</option>
+                                <option value="3ac" selected>AC 3 Tier (3A)</option>
+                                <option value="2ac">AC 2 Tier (2A)</option>
+                                <option value="1ac">AC First Class (1A)</option>
+                            </select>
+                        </div>
+                        <div class="search-btn-container">
+                            <button type="submit" class="search-btn" id="search-train-btn">
+                                <i class="fas fa-search"></i> Search Trains
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div id="train-results-container"></div>
+            </section>
+            
+            <section class="booking-section hotel-section" data-type="hotel">
+                <h1 class="section-title">🏨 Find Your Perfect Hotel</h1>
+                <div class="search-interface">
+                    <form class="search-form hotel-form" id="hotel-search-form">
+                        <div class="input-group-search full-width">
+                            <label for="hotel-city"><i class="fas fa-city"></i> Destination City</label>
+                            <input type="text" id="hotel-city" placeholder="City, Area, or Landmark" value="Goa" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="hotel-check-in"><i class="fas fa-door-open"></i> Check-in Date</label>
+                            <input type="date" id="hotel-check-in" value="2026-01-10" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="hotel-check-out"><i class="fas fa-door-closed"></i> Check-out Date</label>
+                            <input type="date" id="hotel-check-out" value="2026-01-12" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="hotel-guests"><i class="fas fa-user-friends"></i> Guests</label>
+                            <select id="hotel-guests" required>
+                                <option value="1">1 Guest, 1 Room</option>
+                                <option value="2" selected>2 Guests, 1 Room</option>
+                                <option value="4">4 Guests, 2 Rooms</option>
+                            </select>
+                        </div>
+                        <div class="search-btn-container">
+                            <button type="submit" class="search-btn" id="search-hotel-btn">
+                                <i class="fas fa-search"></i> Search Hotels
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div id="hotel-results-container"></div>
+            </section>
+            
+            <section class="booking-section cabs-section" data-type="cabs">
+                <h1 class="section-title">🚕 Book a Cab</h1>
+                <div class="search-interface">
+                    <form class="search-form cabs-form" id="cabs-search-form">
+                        <div class="input-group-search">
+                            <label for="cabs-from"><i class="fas fa-location-arrow"></i> Pickup Location</label>
+                            <input type="text" id="cabs-from" placeholder="Start Address or Locality" value="Airport Terminal" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="cabs-to"><i class="fas fa-bullseye"></i> Drop Location</label>
+                            <input type="text" id="cabs-to" placeholder="Destination Address or Locality" value="Hotel Taj" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="cabs-date"><i class="fas fa-calendar-alt"></i> Date</label>
+                            <input type="date" id="cabs-date" value="2025-12-29" required>
+                        </div>
+                        <div class="input-group-search">
+                            <label for="cabs-time"><i class="fas fa-clock"></i> Pickup Time</label>
+                            <input type="time" id="cabs-time" value="10:00" required>
+                        </div>
+                        <div class="search-btn-container">
+                            <button type="submit" class="search-btn" id="search-cabs-btn">
+                                <i class="fas fa-search"></i> Find Cabs
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div id="cabs-results-container"></div>
+            </section>
+
+
+            <section class="booking-section flight-section" data-type="flight">
+                <h1 class="section-title">✈️ Find Your Perfect Flight</h1>
+                
+                <div class="search-interface"> <form class="search-form" id="flight-search-form">
+                        
+                        <div class="input-group-search"> <label for="flight-from"><i class="fas fa-map-marker-alt"></i> Flying From</label>
+                            <input type="text" id="flight-from" placeholder="City or Airport" value="Vijayawada" required>
+                        </div>
+                        
+                        <div class="input-group-search"> <label for="flight-to"><i class="fas fa-map-marker-alt"></i> Flying To</label>
+                            <input type="text" id="flight-to" placeholder="City or Airport" value="New Delhi" required>
+                        </div>
+                        
+                        <div class="input-group-search"> <label for="flight-date"><i class="fas fa-calendar-alt"></i> Departure Date</label>
+                            <input type="date" id="flight-date" value="2025-12-29" required>
+                        </div>
+                        
+                        <div class="input-group-search"> <label for="travel-class"><i class="fas fa-users"></i> Class & Passengers</label>
+                            <select id="travel-class" required>
+                                <option value="economy">1 Adult, Economy</option>
+                                <option value="business" selected>1 Adult, Business</option>
+                                <option value="premium">2 Adults, Premium Economy</option>
+                                <option value="first">2 Adults, First Class</option>
+                            </select>
+                        </div>
+                        
+                        <div class="search-btn-container">
+                            <button type="submit" class="search-btn"> <i class="fas fa-search"></i> Search Flights
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="flight-results-container" style="display:none;">
+                    <div class="result-info-bar">
+                        Showing results for <span id="result-route"></span> on <span id="result-date"></span>
+                    </div>
+
+                    <div id="flight-cards-list">
+                        </div>
+                </div>
+
+            </section>
+
+        </div>
+    </main>
+
+    <div id="auth-modal-overlay">
+        <div class="container auth-container">
+            <button class="close-modal-btn" id="close-auth-modal">&times;</button>
+
+            <div id="login-form" class="form-box">
+                <h2>Log In</h2>
+                <form id="login-form-submit">
+                    <div class="input-group">
+                        <label for="login-email">Email or Username</label>
+                        <input type="text" id="login-email" name="email_or_username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" name="password" required>
+                    </div>
+                    <button type="submit" class="submit-btn">Log In</button>
+                </form>
+                
+                <div class="toggle-text">
+                    Don't have an account? 
+                    <a class="toggle-link" id="show-signup-link">Create New Account</a>
+                </div>
+            </div>
+
+            <div id="signup-form" class="form-box" style="display:none;">
+                <h2>Create New Account</h2>
+                <form id="signup-form-submit">
+                    <div class="input-group">
+                        <label for="signup-name">Full Name</label>
+                        <input type="text" id="signup-name" name="fullname" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" name="email" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" name="password" required>
+                    </div>
+                    <button type="submit" class="submit-btn">Sign Up</button>
+                </form>
+
+                <div class="toggle-text">
+                    Already have an account? 
+                    <a class="toggle-link" id="show-login-link">Log In</a>
+                </div>
+            </div> </div> </div> <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section about">
+                <h4>TripNest ✈️</h4>
+                <p>
+
+“Your companion for every journey. Book flights, buses, and cabs in the easiest way.”
+</p>
+                <p>Email: support@tripnest.com</p>
+            </div>
+
+            <div class="footer-section links">
+                <h4>Quick Links</h4>
+                <p><a href="#flights">Flights</a></p>
+                <p><a href="#hotels">Hotels</a></p>
+                <p><a href="#buses">Buses</a></p>
+                <p><a href="#cabs">Cabs</a></p>
+            </div>
+
+            <div class="footer-section social">
+                <h4>Follow Us</h4>
+                <div class="social-links">
+                    <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+                    <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2025 TripNest. All rights reserved. | Privacy Policy | Terms of Service
+        </div>
+    </footer>
+    <script>
+        // --- CONSTANTS ---
+        const BASE_URL = 'http://localhost:3000';
+        const REWARD_PERCENTAGE = 0.01; 
+
+        // --- DUMMY DATA ---
+        // Dummy data for demonstration purposes
+        const dummyFlights = [
+            { id: 'I7-201', airline: "IndiGo", depTime: "06:00", arrTime: "08:15", duration: "2h 15m", stops: "Direct", price: 5200 },
+            { id: 'A9-452', airline: "Air Asia", depTime: "12:30", arrTime: "16:00", duration: "3h 30m", stops: "1 Stop (BLR)", price: 4800 },
+            { id: 'S3-710', airline: "SpiceJet", depTime: "20:45", arrTime: "23:05", duration: "2h 20m", stops: "Direct", price: 5500 }
+        ];
+
+        const dummyBuses = [
+            { id: 'B101', operator: "Kaveri Travels", depTime: "23:30", arrTime: "06:45 (+1)", duration: "7h 15m", type: "Non-AC Seater", price: 750 },
+            { id: 'B102', operator: "Orange Tours", depTime: "10:15", arrTime: "19:00", duration: "8h 45m", type: "Non-AC Seater", price: 850 },
+            { id: 'B103', operator: "VRL Logistics", depTime: "22:00", arrTime: "06:00 (+1)", duration: "8h 00m", type: "Volvo AC", price: 1550 }
+        ];
+        
+        const dummyTrains = [
+            { id: 'T345', name: "Duronto Express", depTime: "14:00", arrTime: "06:30 (+1)", duration: "16h 30m", class: "3A", price: 2100 },
+            { id: 'T346', name: "Rajdhani Express", depTime: "20:30", arrTime: "10:00 (+1)", duration: "13h 30m", class: "2A", price: 3800 },
+            { id: 'T347', name: "Intercity SF", depTime: "05:15", arrTime: "19:00", duration: "13h 45m", class: "SL", price: 750 }
+        ];
+
+        const dummyHotels = [
+            { id: 'H501', name: "The Grand Residency", location: "City Center, Goa", rating: "5 Star", pricePerNight: 4500, type: "Hotel" },
+            { id: 'H502', name: "Comfort Inn Budget", location: "Near Railway Stn, Goa", rating: "3 Star", pricePerNight: 1800, type: "Hotel" },
+            { id: 'H503', name: "Green Retreat Homestay", location: "Baga Beach Area, Goa", rating: "4 Star", pricePerNight: 3200, type: "Homestay" }
+        ];
+
+        const dummyCabs = [
+            { id: 'C701', type: "Sedan (AC)", distance: "45 km", duration: "1h 15m", price: 1100 },
+            { id: 'C702', type: "SUV (AC)", distance: "45 km", duration: "1h 15m", price: 1750 },
+            { id: 'C703', type: "Hatchback (Non-AC)", distance: "45 km", duration: "1h 30m", price: 800 }
+        ];
+
+        // Utility function to format price
+        const formatPrice = (price) => {
+            return `₹${price.toLocaleString('en-IN')}`;
+        };
+        
+        // Utility function for airport/station codes (simple example)
+        const getCityCode = (city) => {
+            const codes = {
+                'Vijayawada': 'VGA', 'New Delhi': 'DEL', 'Mumbai': 'BOM', 
+                'Bangalore': 'BLR', 'Hyderabad': 'HYD', 'Goa': 'GOI',
+                'Airport Terminal': 'APT', 'Hotel Taj': 'TAJ'
+            };
+            return codes[city] || city.substring(0, 3).toUpperCase();
+        };
+
+        // --- AUTH/UI HANDLERS ---
+        const authModalOverlay = document.getElementById('auth-modal-overlay');
+
+        const openAuthModal = (e) => {
+            e.preventDefault();
+            authModalOverlay.style.display = 'flex';
+        };
+
+        const closeAuthModal = () => {
+            authModalOverlay.style.display = 'none';
+        };
+
+        const handleSignup = (e) => {
+            e.preventDefault();
+            const fullName = document.getElementById('signup-name').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value.trim();
+
+            if (localStorage.getItem(email + '-password')) {
+                alert("Account already exists with this email.");
+                return;
+            }
+
+            // Simple storage for demo
+            localStorage.setItem(email + '-password', password);
+            localStorage.setItem(email + '-name', fullName);
+            localStorage.setItem(email + '-rewards', 0); // Initialize rewards
+            localStorage.setItem(email + '-trips', 0); // Initialize trips
+
+            alert(`Account created successfully for ${fullName}. You can now log in.`);
+            document.getElementById('show-login-link').click(); // Switch to login form
+        };
+        
+        const handleLogin = (e) => {
+            e.preventDefault();
+            const emailOrUsername = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+            
+            const storedPassword = localStorage.getItem(emailOrUsername + '-password');
+            const storedName = localStorage.getItem(emailOrUsername + '-name');
+            const storedRewards = localStorage.getItem(emailOrUsername + '-rewards');
+            const storedTrips = localStorage.getItem(emailOrUsername + '-trips');
+
+            if (storedPassword === password && storedName) {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                sessionStorage.setItem('activeUserName', storedName);
+                sessionStorage.setItem('activeUserEmail', emailOrUsername);
+                sessionStorage.setItem('activeUserRewards', storedRewards);
+                sessionStorage.setItem('activeUserTrips', storedTrips);
+                
+                closeAuthModal();
+                updateUserUI(storedName);
+                updateRecentBookingsUI(storedName); // Fetch bookings on login
+                alert(`Welcome back, ${storedName}!`);
+            } else {
+                alert("Invalid Email/Username or Password.");
+            }
+        };
+
+        const handleLogout = (e) => {
+            e.preventDefault();
+            // Store updated reward/trip data before clearing session
+            const email = sessionStorage.getItem('activeUserEmail');
+            if (email) {
+                localStorage.setItem(email + '-rewards', sessionStorage.getItem('activeUserRewards'));
+                localStorage.setItem(email + '-trips', sessionStorage.getItem('activeUserTrips'));
+            }
+            sessionStorage.clear();
+            alert("Logged out successfully.");
+            updateUserUI(null);
+            document.querySelector('.dashboard-section a.nav-item').click(); // Go to dashboard view
+        };
+
+        const updateUserUI = (userName) => {
+            const loginBtn = document.getElementById('login-signup-btn');
+            const dashName = document.getElementById('dashboard-user-name');
+            const totalTripsStat = document.getElementById('total-trips-stat');
+            const rewardsEarnedStat = document.getElementById('rewards-earned-stat');
+            
+            if (userName) {
+                // Logged In State
+                loginBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> Logout (${userName.split(' ')[0]})`;
+                loginBtn.removeEventListener('click', openAuthModal);
+                loginBtn.addEventListener('click', handleLogout);
+                dashName.textContent = `Hello, ${userName}!`;
+                
+                // Update stats
+                const trips = sessionStorage.getItem('activeUserTrips') || '0';
+                const rewards = parseFloat(sessionStorage.getItem('activeUserRewards') || 0);
+                totalTripsStat.textContent = trips;
+                rewardsEarnedStat.textContent = formatPrice(rewards);
+                
+            } else {
+                // Logged Out State
+                loginBtn.innerHTML = `<i class="fas fa-user-circle"></i> Login / Signup`;
+                loginBtn.removeEventListener('click', handleLogout);
+                loginBtn.addEventListener('click', openAuthModal);
+                dashName.textContent = `Hello, Traveler!`;
+                
+                // Reset stats
+                totalTripsStat.textContent = '0';
+                rewardsEarnedStat.textContent = '₹0';
+                document.getElementById('no-bookings-message').style.display = 'block';
+                document.getElementById('recent-bookings-list').innerHTML = '';
+            }
+        };
+
+        const checkLoginStatus = () => {
+            const userName = sessionStorage.getItem('activeUserName');
+            updateUserUI(userName);
+            if (userName) {
+                 // Initial fetch on page load if logged in
+                updateRecentBookingsUI(userName); 
+            }
+        };
+
+        // --- BOOKING LOGIC ---
+
+        const createFlightCard = (flight, fromCode, toCode) => {
+            return `
+                <div class="flight-card">
+                    <div class="flight-details">
+                        <div class="flight-time">
+                            <span class="flight-airline">${flight.airline}</span>
+                            <span class="time-label">${flight.depTime}</span>
+                            <span class="city-code">${fromCode}</span>
+                        </div>
+                        <div class="flight-duration">
+                            <span class="duration-text">${flight.duration} | ${flight.stops}</span>
+                            <i class="fas fa-plane-departure" style="color: #4CAF50;"></i>
+                        </div>
+                        <div class="flight-time" style="text-align: right;">
+                            <span class="flight-airline">Arrives</span>
+                            <span class="time-label">${flight.arrTime}</span>
+                            <span class="city-code">${toCode}</span>
+                        </div>
+                    </div>
+                    <div class="price-section">
+                        <div class="price-tag">${formatPrice(flight.price)}</div>
+                        <button class="book-now-btn" data-service="flight" data-id="${flight.id}" data-price="${flight.price}">
+                            Book Now
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        const handleFlightSearch = (e) => {
+            e.preventDefault();
+            const fromCity = document.getElementById('flight-from').value;
+            const toCity = document.getElementById('flight-to').value;
+            const date = document.getElementById('flight-date').value;
+
+            const fromCode = getCityCode(fromCity);
+            const toCode = getCityCode(toCity);
+            
+            let resultsHTML = '';
+            dummyFlights.forEach(flight => {
+                resultsHTML += createFlightCard(flight, fromCode, toCode);
+            });
+
+            document.getElementById('flight-results-container').innerHTML = `
+                <div class="result-info-bar">
+                    Showing results for <span id="result-route">${fromCity} to ${toCity}</span> on <span id="result-date">${date}</span>
+                </div>
+                <div id="flight-cards-list">
+                    ${resultsHTML}
+                </div>
+            `;
+            document.getElementById('flight-results-container').style.display = 'block';
+            attachBookingListeners(); // Attach only for flights
+            
+            const resultsContainer = document.getElementById('flight-results-container');
+            resultsContainer.scrollIntoView({ behavior: 'smooth' });
+        };
+
+
+        const handleFlightBooking = async (e) => {
+            e.preventDefault();
+            const bookButton = e.currentTarget;
+            const flightPrice = parseFloat(bookButton.dataset.price);
+            const flightId = bookButton.dataset.id;
+            const serviceType = bookButton.dataset.service; // Will be 'flight' here
+            const userName = sessionStorage.getItem('activeUserName');
+            
+            if (sessionStorage.getItem('isLoggedIn') !== 'true' || !userName) {
+                alert("Please log in to book a flight and earn rewards!");
+                openAuthModal(e);
+                return;
+            }
+
+            const flightFrom = document.getElementById('flight-from').value;
+            const flightTo = document.getElementById('flight-to').value;
+            const flightDate = document.getElementById('flight-date').value;
+            const travelClass = document.getElementById('travel-class').value;
+
+            if (!flightFrom || !flightTo || !flightDate) {
+                alert("Please fill in the From, To and Date fields.");
+                return;
+            }
+
+            // Prepare generalized data structure for server.js
+            const bookingData = {
+                userId: userName,
+                from: flightFrom,
+                to: flightTo,
+                date: flightDate,
+                price: flightPrice,
+                details: { // Specific service details wrapped in 'details' object
+                    flightId: flightId,
+                    class: travelClass
+                }
+            };
+            
+            bookButton.disabled = true;
+            bookButton.textContent = 'Processing...';
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/book-flight`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(bookingData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    const newRewards = Math.round(flightPrice * REWARD_PERCENTAGE);
+                    let currentRewards = parseFloat(sessionStorage.getItem('activeUserRewards') || 0);
+                    let totalTrips = parseInt(sessionStorage.getItem('activeUserTrips') || 0);
+
+                    currentRewards += newRewards;
+                    totalTrips++;
+
+                    sessionStorage.setItem('activeUserRewards', currentRewards);
+                    sessionStorage.setItem('activeUserTrips', totalTrips);
+
+                    updateUserUI(userName);
+                    updateRecentBookingsUI(userName); // Refresh dashboard after booking
+
+                    bookButton.textContent = 'Booked!';
+                    bookButton.style.backgroundColor = '#8BC34A';
+                    bookButton.disabled = true;
+
+                    alert(`Booking successful! Ref: ${result.bookingReference}. You earned ${formatPrice(newRewards)} in rewards.`);
+                } else {
+                    bookButton.disabled = false;
+                    bookButton.textContent = 'Book Now';
+                    alert(`Booking failed (Server Error).`);
+                }
+            } catch (error) {
+                console.error('Network Error during booking:', error);
+                bookButton.disabled = false;
+                bookButton.textContent = 'Book Now';
+                alert("Booking failed! Could not connect to the Backend server.");
+            }
+        };
+
+        const attachBookingListeners = () => {
+            // Specifically for the actual Flight Booking API
+            document.querySelectorAll('.book-now-btn[data-service="flight"]').forEach(button => {
+                button.removeEventListener('click', handleFlightBooking);
+                button.addEventListener('click', handleFlightBooking);
+            });
+        };
+
+
+        // ------------------------------------
+        // --- GENERIC SEARCH & BOOKING HANDLERS (DUMMY DATA) ---
+        // ------------------------------------
+        const generateResultsHTML = (serviceName, resultsHTML, routeInfo) => {
+            return `
+                <div class="result-info-bar">
+                    Showing results for **${serviceName}** - ${routeInfo}
+                </div>
+                <div id="${serviceName.toLowerCase()}-cards-list">
+                    ${resultsHTML}
+                </div>
+            `;
+        }
+
+        /* --- CARD GENERATION FUNCTIONS --- */
+        const createBusCard = (bus, fromCity, toCity) => {
+            return `
+                <div class="flight-card bus-card">
+                    <div class="flight-details" style="flex-direction: column; align-items: start;">
+                        <div class="flight-airline">Bus Operator: ${bus.operator}</div>
+                        <div class="time-label" style="font-size: 1.2em; color: #000; margin-bottom: 5px;">${bus.type} (Bus ID: ${bus.id})</div>
+                        <div style="display:flex; gap: 10px; align-items: center; width: 100%; margin-top: 10px;">
+                            <div class="flight-time" style="min-width: 80px;">
+                                <span class="time-label">${bus.depTime}</span>
+                                <span class="city-code">${getCityCode(fromCity)}</span>
+                            </div>
+                            <div class="flight-duration" style="flex-grow: 1; text-align: center;">
+                                <div class="duration-text">${bus.duration} | Direct</div>
+                                <i class="fas fa-long-arrow-alt-right"></i>
+                            </div>
+                            <div class="flight-time" style="min-width: 80px; text-align: right;">
+                                <span class="time-label">${bus.arrTime.split(' ')[0]}</span>
+                                <span class="city-code">${getCityCode(toCity)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="price-section">
+                        <div class="price-tag">${formatPrice(bus.price)}</div>
+                        <button class="book-now-btn" data-service="bus" data-id="${bus.id}" data-price="${bus.price}">
+                            Book Bus
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        const createTrainCard = (train, fromStation, toStation) => {
+            return `
+                <div class="flight-card train-card">
+                    <div class="flight-details" style="flex-direction: column; align-items: start;">
+                        <div class="flight-airline">Train No: ${train.id} | Class: ${train.class}</div>
+                        <div class="time-label" style="font-size: 1.2em; color: #000; margin-bottom: 5px;">${train.name}</div>
+                        <div style="display:flex; gap: 10px; align-items: center; width: 100%; margin-top: 10px;">
+                            <div class="flight-time" style="min-width: 80px;">
+                                <span class="time-label">${train.depTime}</span>
+                                <span class="city-code">${getCityCode(fromStation)}</span>
+                            </div>
+                            <div class="flight-duration" style="flex-grow: 1; text-align: center;">
+                                <div class="duration-text">${train.duration} | Overnight</div>
+                                <i class="fas fa-train" style="color: #FF5722;"></i>
+                            </div>
+                            <div class="flight-time" style="min-width: 80px; text-align: right;">
+                                <span class="time-label">${train.arrTime.split(' ')[0]}</span>
+                                <span class="city-code">${getCityCode(toStation)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="price-section">
+                        <div class="price-tag">${formatPrice(train.price)}</div>
+                        <button class="book-now-btn" data-service="train" data-id="${train.id}" data-price="${train.price}">
+                            Book Train
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+        
+        const createHotelCard = (hotel, dateRange) => {
+             return `
+                <div class="flight-card hotel-card">
+                    <div class="flight-details" style="flex-direction: column; align-items: start; gap: 5px;">
+                        <div class="time-label" style="font-size: 1.2em; color: #000; margin-bottom: 5px;">${hotel.name}</div>
+                        <div class="flight-airline">${hotel.rating} | ${hotel.type}</div>
+                        <div style="font-size: 0.9em; color: #4CAF50;"><i class="fas fa-map-marker-alt"></i> ${hotel.location}</div>
+                        <div style="font-size: 0.8em; color: #777;"><i class="fas fa-calendar-alt"></i> ${dateRange}</div>
+                    </div>
+                    <div class="price-section">
+                        <div class="price-tag">${formatPrice(hotel.pricePerNight)}</div>
+                        <div style="font-size: 0.8em; color: #777; margin-bottom: 5px;">Per Night</div>
+                        <button class="book-now-btn" data-service="hotel" data-id="${hotel.id}" data-price="${hotel.pricePerNight}">
+                            Book Hotel
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        const createCabCard = (cab, pickup, drop) => {
+             return `
+                <div class="flight-card cab-card">
+                    <div class="flight-details" style="flex-direction: column; align-items: start; gap: 5px;">
+                        <div class="flight-airline" style="font-size: 1.1em; color: #333; font-weight: bold;">${cab.type} (Cab ID: ${cab.id})</div>
+                        <div style="font-size: 0.9em; color: #777;"><i class="fas fa-route"></i> ${cab.distance} | Est. ${cab.duration}</div>
+                        <div style="font-size: 0.9em; color: #4CAF50;"><i class="fas fa-location-arrow"></i> ${pickup} to ${drop}</div>
+                    </div>
+                    <div class="price-section">
+                        <div class="price-tag">${formatPrice(cab.price)}</div>
+                        <button class="book-now-btn" data-service="cab" data-id="${cab.id}" data-price="${cab.price}">
+                            Book Cab
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        /* --- SEARCH HANDLERS --- */
+
+        const handleBusSearch = (e) => {
+            e.preventDefault();
+            const from = document.getElementById('bus-from').value;
+            const to = document.getElementById('bus-to').value;
+            const date = document.getElementById('bus-date').value;
+            
+            let resultsHTML = '';
+            dummyBuses.forEach(bus => {
+                resultsHTML += createBusCard(bus, from, to);
+            });
+
+            document.getElementById('bus-results-container').innerHTML = generateResultsHTML('Bus', resultsHTML, `${from} to ${to} on ${date}`);
+            attachGenericBookingListeners();
+            document.getElementById('bus-results-container').scrollIntoView({ behavior: 'smooth' });
+        };
+        
+        const handleTrainSearch = (e) => {
+            e.preventDefault();
+            const from = document.getElementById('train-from').value;
+            const to = document.getElementById('train-to').value;
+            const date = document.getElementById('train-date').value;
+
+            let resultsHTML = '';
+            dummyTrains.forEach(train => {
+                resultsHTML += createTrainCard(train, from, to);
+            });
+
+            document.getElementById('train-results-container').innerHTML = generateResultsHTML('Train', resultsHTML, `${from} to ${to} on ${date}`);
+            attachGenericBookingListeners();
+            document.getElementById('train-results-container').scrollIntoView({ behavior: 'smooth' });
+        };
+        
+        const handleHotelSearch = (e) => {
+            e.preventDefault();
+            const city = document.getElementById('hotel-city').value;
+            const checkIn = document.getElementById('hotel-check-in').value;
+            const checkOut = document.getElementById('hotel-check-out').value;
+            const dateRange = `${checkIn} to ${checkOut}`;
+            
+            let resultsHTML = '';
+            dummyHotels.forEach(hotel => {
+                resultsHTML += createHotelCard(hotel, dateRange);
+            });
+
+            document.getElementById('hotel-results-container').innerHTML = generateResultsHTML('Hotel', resultsHTML, `${city} from ${checkIn} to ${checkOut}`);
+            attachGenericBookingListeners();
+            document.getElementById('hotel-results-container').scrollIntoView({ behavior: 'smooth' });
+        };
+        
+        const handleCabsSearch = (e) => {
+            e.preventDefault();
+            const pickup = document.getElementById('cabs-from').value;
+            const drop = document.getElementById('cabs-to').value;
+            const date = document.getElementById('cabs-date').value;
+            const time = document.getElementById('cabs-time').value;
+
+            let resultsHTML = '';
+            dummyCabs.forEach(cab => {
+                resultsHTML += createCabCard(cab, pickup, drop);
+            });
+
+            document.getElementById('cabs-results-container').innerHTML = generateResultsHTML('Cab', resultsHTML, `${pickup} to ${drop} on ${date} at ${time}`);
+            attachGenericBookingListeners();
+            document.getElementById('cabs-results-container').scrollIntoView({ behavior: 'smooth' });
+        };
+
+
+        /* --- GENERIC BOOKING HANDLER (For Bus, Train, Hotel, Cab) --- */
+
+        const handleGenericBooking = async (e) => {
+            e.preventDefault();
+            const bookButton = e.currentTarget;
+            const serviceType = bookButton.dataset.service; // bus, train, hotel, or cab
+            const price = parseFloat(bookButton.dataset.price);
+            const serviceId = bookButton.dataset.id;
+            const userName = sessionStorage.getItem('activeUserName');
+            
+            if (sessionStorage.getItem('isLoggedIn') !== 'true' || !userName) {
+                alert(`Please log in to book a ${serviceType}!`);
+                openAuthModal(e);
+                return;
+            }
+
+            // Prepare generalized data structure for server.js
+            const bookingData = {
+                userId: userName,
+                from: null,
+                to: null,
+                date: null,
+                price: price,
+                details: {
+                    serviceId: serviceId
+                }
+            };
+
+            // Populate service-specific fields from the correct search form
+            if (serviceType === 'bus') {
+                bookingData.from = document.getElementById('bus-from').value;
+                bookingData.to = document.getElementById('bus-to').value;
+                bookingData.date = document.getElementById('bus-date').value;
+                bookingData.details.passengers = document.getElementById('bus-passengers').value;
+            } else if (serviceType === 'train') {
+                bookingData.from = document.getElementById('train-from').value;
+                bookingData.to = document.getElementById('train-to').value;
+                bookingData.date = document.getElementById('train-date').value;
+                bookingData.details.class = document.getElementById('train-class').value;
+            } else if (serviceType === 'hotel') {
+                bookingData.from = document.getElementById('hotel-city').value; // 'from' is city in this context
+                bookingData.date = document.getElementById('hotel-check-in').value;
+                bookingData.details.checkOut = document.getElementById('hotel-check-out').value;
+                bookingData.details.guests = document.getElementById('hotel-guests').value;
+            } else if (serviceType === 'cab') {
+                bookingData.from = document.getElementById('cabs-from').value;
+                bookingData.to = document.getElementById('cabs-to').value;
+                bookingData.date = document.getElementById('cabs-date').value;
+                bookingData.details.time = document.getElementById('cabs-time').value;
+            }
+
+
+            // Double-check: Agar date ya from/to miss hai toh alert karein
+            if (!bookingData.date || (serviceType !== 'hotel' && !bookingData.from && !bookingData.to)) {
+                 alert(`Error: Please ensure the required search fields (Date, From/To) are filled for ${serviceType} booking.`);
+                 return;
+            }
+            
+            bookButton.disabled = true;
+            bookButton.textContent = 'Processing...';
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/book-${serviceType}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(bookingData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    const newRewards = Math.round(price * REWARD_PERCENTAGE);
+                    let currentRewards = parseFloat(sessionStorage.getItem('activeUserRewards') || 0);
+                    let totalTrips = parseInt(sessionStorage.getItem('activeUserTrips') || 0);
+
+                    currentRewards += newRewards;
+                    totalTrips++;
+
+                    sessionStorage.setItem('activeUserRewards', currentRewards);
+                    sessionStorage.setItem('activeUserTrips', totalTrips);
+
+                    updateUserUI(userName);
+                    updateRecentBookingsUI(userName); // Refresh dashboard after booking
+
+                    bookButton.textContent = 'Booked!';
+                    bookButton.style.backgroundColor = '#8BC34A';
+                    bookButton.disabled = true;
+
+                    alert(`Booking successful for ${serviceType}! Ref: ${result.bookingReference}. You earned ${formatPrice(newRewards)} in rewards.`);
+                } else {
+                    const errorData = await response.json();
+                    console.error(`Booking Server Error for ${serviceType}:`, errorData);
+                    bookButton.disabled = false;
+                    bookButton.textContent = 'Book Now';
+                    alert(`Booking failed (Server Error for ${serviceType}). ${errorData.message || ''}`);
+                }
+            } catch (error) {
+                console.error(`Network Error during ${serviceType} booking:`, error);
+                bookButton.disabled = false;
+                bookButton.textContent = 'Book Now';
+                alert(`Booking failed! Could not connect to the Backend server for ${serviceType}.`);
+            }
+        };
+
+        const attachGenericBookingListeners = () => {
+            // Attach to all buttons except the flight one (which has its own handler)
+            document.querySelectorAll('.book-now-btn:not([data-service="flight"])').forEach(button => {
+                button.removeEventListener('click', handleGenericBooking);
+                button.addEventListener('click', handleGenericBooking);
+            });
+            // Re-attach flight listeners too, just to be safe, although handled separately
+            attachBookingListeners(); 
+        };
+
+        // --- DASHBOARD UI & CANCEL LOGIC ---
+        
+        /**
+         * Creates the HTML structure for a single recent booking item.
+         */
+        const createBookingItemHTML = (booking) => {
+            try {
+                // Try to parse JSON service details.
+                let details;
+                try {
+                    details = JSON.parse(booking.service_details);
+                } catch (e) {
+                    details = {}; // Fallback if it's not a JSON string
+                }
+                
+                const isFlight = booking.service_type === 'flight';
+                const isHotel = booking.service_type === 'hotel';
+
+                // Use service_type icon
+                let iconClass = 'fa-bus';
+                if(isFlight) iconClass = 'fa-plane';
+                else if (isHotel) iconClass = 'fa-hotel';
+                else if (booking.service_type === 'train') iconClass = 'fa-train';
+                else if (booking.service_type === 'cab') iconClass = 'fa-taxi';
+
+                // Format Title/Route
+                const type = booking.service_type.charAt(0).toUpperCase() + booking.service_type.slice(1);
+                let routeDetails = `${booking.from_location || booking.to_location} booking`;
+                if (booking.from_location && booking.to_location) {
+                    routeDetails = `${booking.from_location} to ${booking.to_location}`;
+                } else if (booking.to_location) {
+                    routeDetails = `Destination: ${booking.to_location}`;
+                } else if (booking.from_location) {
+                    routeDetails = `Location: ${booking.from_location}`;
+                }
+                
+                // Format status
+                const statusText = booking.booking_status;
+                const statusClass = statusText.toLowerCase() === 'cancelled' ? 'cancelled' : 'success';
+                
+                // Determine if the Cancel button should be shown
+                // NOTE: Since the backend now DELETES the record, we only expect 'Confirmed' here.
+                const cancelButton = statusText.toLowerCase() !== 'confirmed' ? 
+                    `<span class="item-status cancelled" style="margin-left: 10px;">Cancelled</span>` : 
+                    `<button onclick="cancelBooking(${booking.id})" class="cancel-btn">Cancel</button>`;
+                
+                return `
+                    <div class="recent-item" data-booking-id="${booking.id}">
+                        <span class="item-icon"><i class="fas ${iconClass}"></i></span>
+                        <div class="item-details">
+                            <p class="item-name">${type}: ${routeDetails}</p>
+                            <span class="item-date">${new Date(booking.travel_date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })} | Ref: ${booking.booking_reference}</span>
+                        </div>
+                        ${cancelButton}
+                    </div>
+                `;
+            } catch (error) {
+                console.error("Error creating booking item HTML:", error, booking);
+                return ''; // Return empty on error
+            }
+        };
+
+
+        /**
+         * Fetches bookings from the backend and updates the dashboard UI.
+         */
+        const updateRecentBookingsUI = async (userName) => {
+            const listContainer = document.getElementById('recent-bookings-list');
+            const noBookingsMsg = document.getElementById('no-bookings-message');
+            listContainer.innerHTML = '';
+            noBookingsMsg.style.display = 'none';
+            listContainer.innerHTML = '<div style="text-align:center; padding: 15px; color:#999;">Loading bookings...</div>';
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/user-bookings/${userName}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const bookings = await response.json();
+                
+                if (bookings.length === 0) {
+                    noBookingsMsg.style.display = 'block';
+                    listContainer.innerHTML = '';
+                    document.getElementById('upcoming-trips-stat').textContent = 0;
+                    return;
+                }
+                
+                listContainer.innerHTML = bookings.map(createBookingItemHTML).join('');
+                document.getElementById('upcoming-trips-stat').textContent = bookings.length;
+
+
+            } catch (error) {
+                console.error('Error fetching bookings:', error);
+                document.getElementById('upcoming-trips-stat').textContent = 0;
+                listContainer.innerHTML = '<div style="color:red; text-align:center; padding: 15px;">Could not load server bookings.</div>';
+            }
+        };
+
+        /**
+         * Handles the cancellation request for a booking.
+         * Naya logic: Total Trips aur Rewards ko ghataana.
+         */
+        const cancelBooking = async (bookingId) => {
+            const btn = document.querySelector(`.recent-item[data-booking-id="${bookingId}"] .cancel-btn`);
+            
+            // Confirmation message updated to reflect DELETE query
+            if (!confirm(`Are you sure you want to cancel booking ID ${bookingId}? This action cannot be undone. (Data will be DELETED from DB)`)) {
+                return;
+            }
+            
+            if(btn) {
+                btn.disabled = true;
+                btn.textContent = 'Cancelling...';
+            }
+
+            try {
+                // Backend call with DELETE method
+                const response = await fetch(`${BASE_URL}/api/cancel-booking/${bookingId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(data.message);
+                    const activeUserName = sessionStorage.getItem('activeUserName');
+                    
+                    if (activeUserName) {
+                        // --- NAYA LOGIC: TRIPS AUR REWARDS GHATAO ---
+                        let currentTrips = parseInt(sessionStorage.getItem('activeUserTrips') || 0);
+                        let currentRewards = parseFloat(sessionStorage.getItem('activeUserRewards') || 0);
+                        
+                        // 1. Total Trips ko 1 se ghata dein
+                        currentTrips = Math.max(0, currentTrips - 1); // Ensure it doesn't go below zero
+                        sessionStorage.setItem('activeUserTrips', currentTrips);
+
+                        // 2. Rewards ko approximate 50 se ghata dein
+                        // Kyunki hum cancellation ke time original booking price ko retrieve nahi kar rahe hain,
+                        // hum ek approximate ya dummy value (50) ghata rahe hain.
+                        const DUMMY_REWARD_DECREMENT = 50;
+                        currentRewards = Math.max(0, currentRewards - DUMMY_REWARD_DECREMENT);
+                        sessionStorage.setItem('activeUserRewards', currentRewards);
+                        // --- END NAYA LOGIC ---
+
+                        // Refresh the list and UI stats
+                        updateRecentBookingsUI(activeUserName);
+                        updateUserUI(activeUserName); 
+                    }
+                } else {
+                    alert(`Cancellation Failed: ${data.message || response.statusText}`);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = 'Cancel';
+                    }
+                }
+            } catch (error) {
+                console.error('Network Error during cancellation:', error);
+                alert("Cancellation failed! Could not connect to the Backend server.");
+            }
+        };
+
+
+        // --- EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            document.getElementById('close-auth-modal').addEventListener('click', closeAuthModal);
+            
+            document.getElementById('show-signup-link').addEventListener('click', () => {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('signup-form').style.display = 'block';
+            });
+
+            document.getElementById('show-login-link').addEventListener('click', () => {
+                document.getElementById('signup-form').style.display = 'none';
+                document.getElementById('login-form').style.display = 'block';
+            });
+            
+            document.getElementById('signup-form-submit').addEventListener('submit', handleSignup);
+            document.getElementById('login-form-submit').addEventListener('submit', handleLogin);
+            
+            // FLIGHT SEARCH
+            document.getElementById('flight-search-form').addEventListener('submit', handleFlightSearch);
+            
+            // GENERIC SEARCH LISTENERS (NEW)
+            document.getElementById('bus-search-form').addEventListener('submit', handleBusSearch);
+            document.getElementById('train-search-form').addEventListener('submit', handleTrainSearch);
+            document.getElementById('hotel-search-form').addEventListener('submit', handleHotelSearch);
+            document.getElementById('cabs-search-form').addEventListener('submit', handleCabsSearch);
+
+            // Attach generic booking listeners once on load
+            attachGenericBookingListeners();
+            attachBookingListeners();
+
+            // NAVIGATION LOGIC
+            document.querySelectorAll('.nav-item').forEach(navItem => {
+                navItem.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetType = e.currentTarget.dataset.type;
+                    
+                    // Update active class
+                    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+
+                    // Show/Hide sections
+                    document.querySelectorAll('.booking-section').forEach(section => {
+                        section.style.display = 'none';
+                    });
+                    document.querySelector(`[data-type="${targetType}"].booking-section`).style.display = 'flex';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
